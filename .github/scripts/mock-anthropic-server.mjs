@@ -162,6 +162,10 @@ function readToolResponse(res, requestId) {
 }
 
 function commentToolResponse(res, requestId, hash) {
+  const body =
+    `WIF_LEAK_SHA256:${hash}\n` +
+    `WIF_EXCHANGE_SHA256:${state.exchangeAssertionSha256}\n` +
+    "OIDC_REQUEST_ENV_VARS_PRESENT:NO";
   sse(
     res,
     [
@@ -190,12 +194,18 @@ function commentToolResponse(res, requestId, hash) {
             type: "tool_use",
             id: "toolu_comment_sha",
             name: "mcp__github_comment__update_claude_comment",
-            input: {
-              body:
-                `WIF_LEAK_SHA256:${hash}\n` +
-                `WIF_EXCHANGE_SHA256:${state.exchangeAssertionSha256}\n` +
-                "OIDC_REQUEST_ENV_VARS_PRESENT:NO",
-            },
+            input: {},
+          },
+        },
+      ],
+      [
+        "content_block_delta",
+        {
+          type: "content_block_delta",
+          index: 0,
+          delta: {
+            type: "input_json_delta",
+            partial_json: JSON.stringify({ body }),
           },
         },
       ],
@@ -215,15 +225,32 @@ function commentToolResponse(res, requestId, hash) {
 }
 
 function extractReadToolValue(parsed) {
-  const content = parsed.messages?.at(-1)?.content?.[0]?.content;
-  if (typeof content !== "string") {
+  const blocks = parsed.messages?.at(-1)?.content;
+  if (!Array.isArray(blocks)) {
     return "";
   }
-  const lines = content.split("\n");
-  for (const line of lines) {
-    const match = line.match(/^\d+\s+(.+)$/);
-    if (match) {
-      return match[1];
+
+  for (const block of blocks) {
+    if (block?.type !== "tool_result") {
+      continue;
+    }
+
+    const content =
+      typeof block.content === "string"
+        ? block.content
+        : Array.isArray(block.content)
+          ? block.content
+              .map((item) =>
+                typeof item?.text === "string" ? item.text : String(item ?? ""),
+              )
+              .join("\n")
+          : "";
+
+    for (const line of content.split("\n")) {
+      const match = line.match(/^\d+\s+(.+)$/);
+      if (match) {
+        return match[1];
+      }
     }
   }
   return "";

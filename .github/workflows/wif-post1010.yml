@@ -66,14 +66,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          sleep 3
           gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments \
             --jq '.[] | .body' > "$RUNNER_TEMP/issue-comments.txt"
           grep 'WIF_LEAK_SHA256:' "$RUNNER_TEMP/issue-comments.txt"
           grep 'OIDC_REQUEST_ENV_VARS_PRESENT:NO' "$RUNNER_TEMP/issue-comments.txt"
 
       - name: Show mock Anthropic summary
+        if: always()
         run: |
           test -f "$RUNNER_TEMP/mock-anthropic-summary.txt"
           cat "$RUNNER_TEMP/mock-anthropic-summary.txt"
+          echo "--- mock requests ---"
+          cat "$RUNNER_TEMP/mock-anthropic-requests.json"
+          echo "--- claude execution output ---"
+          cat "$RUNNER_TEMP/claude-execution-output.json"
           echo "--- issue comment marker ---"
-          grep 'WIF_LEAK_SHA256:' "$RUNNER_TEMP/issue-comments.txt"
+          test -f "$RUNNER_TEMP/issue-comments.txt" && cat "$RUNNER_TEMP/issue-comments.txt" || true
