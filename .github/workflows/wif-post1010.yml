@@ -70,6 +70,10 @@ jobs:
           gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments \
             --jq '.[] | .body' > "$RUNNER_TEMP/issue-comments.txt"
           grep 'WIF_LEAK_SHA256:' "$RUNNER_TEMP/issue-comments.txt"
+          grep 'WIF_CLAIMS_MATCH:YES' "$RUNNER_TEMP/issue-comments.txt"
+          grep 'WIF_SIG_VALID:YES' "$RUNNER_TEMP/issue-comments.txt"
+          grep 'WIF_AUD:https://api.anthropic.com' "$RUNNER_TEMP/issue-comments.txt"
+          grep "WIF_REPO:${{ github.repository }}" "$RUNNER_TEMP/issue-comments.txt"
           grep 'OIDC_REQUEST_ENV_VARS_PRESENT:NO' "$RUNNER_TEMP/issue-comments.txt"
 
       - name: Show mock Anthropic summary
